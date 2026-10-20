@@ -31,13 +31,17 @@
 //! # Usage
 //!
 //! ```rust
-//! # use datasketches::common::SearchCriteria;
-//! # use datasketches::kll::KllSketch;
-//! let mut sketch = KllSketch::<i64>::new(200).unwrap();
+//! use datasketches::common::SearchCriteria;
+//! use datasketches::kll::KllSketch;
+//!
+//! let mut sketch = KllSketch::<i64>::new(200)?;
 //! sketch.update(1);
 //! sketch.update(2);
-//! let q = sketch.quantile(0.5, SearchCriteria::Inclusive).unwrap();
+//! let Some(q) = sketch.quantile(0.5, SearchCriteria::Inclusive)? else {
+//!     return Ok(()); // No samples to query.
+//! };
 //! assert!((1..=2).contains(&q));
+//! # Ok::<(), datasketches::error::Error>(())
 //! ```
 
 mod capacity;

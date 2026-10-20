@@ -79,7 +79,8 @@ impl<T: Clone + Ord> KllSketch<T> {
     /// # Examples
     ///
     /// ```
-    /// # use datasketches::kll::KllSketch;
+    /// use datasketches::kll::KllSketch;
+    ///
     /// let sketch = KllSketch::<i64>::new(200).unwrap();
     /// assert_eq!(sketch.k(), 200);
     /// ```
@@ -123,11 +124,15 @@ impl<T: Clone + Ord> KllSketch<T> {
     }
 
     /// Returns the minimum item seen by the sketch.
+    ///
+    /// Returns `None` if the sketch is empty.
     pub fn min_item(&self) -> Option<&T> {
         self.min_item.as_ref()
     }
 
     /// Returns the maximum item seen by the sketch.
+    ///
+    /// Returns `None` if the sketch is empty.
     pub fn max_item(&self) -> Option<&T> {
         self.max_item.as_ref()
     }
@@ -202,12 +207,10 @@ impl<T: Clone + Ord> KllSketch<T> {
 
     /// Returns the normalized rank of the given item.
     ///
-    /// # Errors
-    ///
-    /// Returns an error if the sketch is empty.
-    pub fn rank(&self, item: &T, criteria: SearchCriteria) -> Result<f64, Error> {
+    /// Returns `None` if the sketch is empty.
+    pub fn rank(&self, item: &T, criteria: SearchCriteria) -> Option<f64> {
         if self.is_empty() {
-            return Err(Error::invalid_argument("cannot query an empty sketch"));
+            return None;
         }
         let inclusive = criteria == SearchCriteria::Inclusive;
         let mut weight = 0u64;
@@ -222,70 +225,87 @@ impl<T: Clone + Ord> KllSketch<T> {
                 .count() as u64;
             weight += count << level;
         }
-        Ok(weight as f64 / self.n as f64)
+        Some(weight as f64 / self.n as f64)
     }
 
     /// Returns the quantile for the given normalized rank.
     ///
-    /// Ranks `0.0` and `1.0` return the exact minimum and maximum items of the stream.
+    /// Ranks `0.0` and `1.0` return the exact minimum and maximum items of the stream. Returns
+    /// `Ok(None)` if the sketch is empty.
     ///
     /// # Errors
     ///
-    /// Returns an error if the sketch is empty or `rank` is outside `[0.0, 1.0]`.
-    pub fn quantile(&self, rank: f64, criteria: SearchCriteria) -> Result<T, Error> {
-        if self.is_empty() {
-            return Err(Error::invalid_argument("cannot query an empty sketch"));
-        }
+    /// Returns `InvalidArgument` if `rank` is NaN or outside `[0.0, 1.0]`, even if the sketch is
+    /// empty.
+    pub fn quantile(&self, rank: f64, criteria: SearchCriteria) -> Result<Option<T>, Error> {
         if !(0.0..=1.0).contains(&rank) {
             return Err(Error::invalid_argument(format!(
                 "rank must be in [0.0, 1.0], got {rank}"
             )));
         }
+        if self.is_empty() {
+            return Ok(None);
+        }
         if rank == 0.0 {
-            return Ok(self.min_item.as_ref().unwrap().clone());
+            return Ok(Some(self.min_item.as_ref().unwrap().clone()));
         }
         if rank == 1.0 {
-            return Ok(self.max_item.as_ref().unwrap().clone());
+            return Ok(Some(self.max_item.as_ref().unwrap().clone()));
         }
         self.sorted_view().quantile(rank, criteria)
     }
 
     /// Returns approximate quantiles for the given normalized ranks.
     ///
-    /// Ranks `0.0` and `1.0` return the exact minimum and maximum items of the stream.
+    /// Ranks `0.0` and `1.0` return the exact minimum and maximum items of the stream. Returns
+    /// `Ok(None)` if the sketch is empty. Otherwise, an empty `ranks` slice returns
+    /// `Ok(Some(vec![]))`.
     ///
     /// The sorted view is built once for the whole batch.
     ///
     /// # Errors
     ///
-    /// Returns an error if the sketch is empty or any rank is outside `[0.0, 1.0]`.
-    pub fn quantiles(&self, ranks: &[f64], criteria: SearchCriteria) -> Result<Vec<T>, Error> {
+    /// Returns `InvalidArgument` if any rank is NaN or outside `[0.0, 1.0]`, even if the sketch is
+    /// empty.
+    pub fn quantiles(
+        &self,
+        ranks: &[f64],
+        criteria: SearchCriteria,
+    ) -> Result<Option<Vec<T>>, Error> {
         self.sorted_view().quantiles(ranks, criteria)
     }
 
     /// Returns the approximate CDF for the given split points.
     ///
+    /// Returns `Ok(None)` if the sketch is empty. Otherwise, an empty `split_points` slice returns
+    /// `Ok(Some(vec![1.0]))`.
+    ///
     /// # Errors
     ///
-    /// Returns an error if the sketch is empty or the split points are not unique and strictly
-    /// increasing.
-    pub fn cdf(&self, split_points: &[T], criteria: SearchCriteria) -> Result<Vec<f64>, Error> {
-        if self.is_empty() {
-            return Err(Error::invalid_argument("cannot query an empty sketch"));
-        }
+    /// Returns `InvalidArgument` if the split points are not strictly increasing, even if the
+    /// sketch is empty.
+    pub fn cdf(
+        &self,
+        split_points: &[T],
+        criteria: SearchCriteria,
+    ) -> Result<Option<Vec<f64>>, Error> {
         self.sorted_view().cdf(split_points, criteria)
     }
 
     /// Returns the approximate PMF for the given split points.
     ///
+    /// Returns `Ok(None)` if the sketch is empty. Otherwise, an empty `split_points` slice returns
+    /// `Ok(Some(vec![1.0]))`.
+    ///
     /// # Errors
     ///
-    /// Returns an error if the sketch is empty or the split points are not unique and strictly
-    /// increasing.
-    pub fn pmf(&self, split_points: &[T], criteria: SearchCriteria) -> Result<Vec<f64>, Error> {
-        if self.is_empty() {
-            return Err(Error::invalid_argument("cannot query an empty sketch"));
-        }
+    /// Returns `InvalidArgument` if the split points are not strictly increasing, even if the
+    /// sketch is empty.
+    pub fn pmf(
+        &self,
+        split_points: &[T],
+        criteria: SearchCriteria,
+    ) -> Result<Option<Vec<f64>>, Error> {
         self.sorted_view().pmf(split_points, criteria)
     }
 
