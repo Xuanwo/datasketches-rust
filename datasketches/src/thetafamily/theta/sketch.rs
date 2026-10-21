@@ -218,8 +218,8 @@ impl ThetaSketch {
 
     /// Updates the sketch with a hashable value.
     ///
-    /// You may use [`hash::value`](crate::hash::value) wrappers when another DataSketches
-    /// implementation requires a specific value hashing strategy.
+    /// Use [`hash::value`](crate::hash::value) wrappers to select an input encoding for
+    /// cross-language hashing.
     ///
     /// # Examples
     ///
@@ -268,7 +268,7 @@ impl ThetaSketch {
     /// Returns theta as a `u64`.
     ///
     /// An empty sketch reports `MAX_THETA` even when it was built with a sampling probability
-    /// below `1.0`, matching the other DataSketches implementations.
+    /// below `1.0`.
     pub fn theta64(&self) -> u64 {
         if self.is_empty {
             MAX_THETA
@@ -546,6 +546,8 @@ impl CompactThetaSketch {
 
     /// Serializes this sketch in compressed form if applicable.
     ///
+    /// The serialized data can be read by other DataSketches implementations.
+    ///
     /// Falls back to [`serialize`](Self::serialize) when compression is not applicable.
     pub fn serialize_compressed(&self) -> Vec<u8> {
         if self.is_suitable_for_compression() {
@@ -562,6 +564,8 @@ impl CompactThetaSketch {
     }
 
     /// Serializes this sketch into the uncompressed compact Theta format.
+    ///
+    /// The serialized data can be read by other DataSketches implementations.
     ///
     /// Empty sketches serialize with a zero seed hash.
     pub fn serialize(&self) -> Vec<u8> {
@@ -590,7 +594,8 @@ impl CompactThetaSketch {
 
         if pre_longs > 1 {
             bytes.write_u32_le(retained_hashes.len() as u32);
-            bytes.write_u32_be(0); // not used by compact sketches; match Java/C++
+            // Unused by compact sketches; matches datasketches-java and datasketches-cpp.
+            bytes.write_u32_be(0);
         }
         if self.is_estimation_mode() {
             bytes.write_u64_le(self.theta64());
@@ -689,6 +694,8 @@ impl CompactThetaSketch {
 
     /// Deserializes a compact Theta sketch using the default seed.
     ///
+    /// Also accepts data serialized by other DataSketches implementations.
+    ///
     /// # Errors
     ///
     /// Returns `InvalidData` if the image is malformed or a non-empty image's seed hash does not
@@ -698,6 +705,8 @@ impl CompactThetaSketch {
     }
 
     /// Deserializes a compact Theta sketch using `seed`.
+    ///
+    /// Also accepts data serialized by other DataSketches implementations.
     ///
     /// Empty sketches use the hash of `seed` regardless of the stored seed hash.
     ///

@@ -554,7 +554,9 @@ impl TDigestMut {
         Ok(self.view().quantiles(ranks))
     }
 
-    /// Serializes this mutable t-digest to bytes.
+    /// Serializes this mutable t-digest to bytes in double precision.
+    ///
+    /// The serialized data can be read by other DataSketches implementations.
     ///
     /// # Examples
     ///
@@ -580,6 +582,8 @@ impl TDigestMut {
     }
 
     /// Deserializes a mutable t-digest from the standard double-precision format.
+    ///
+    /// Also accepts data serialized by other DataSketches implementations.
     ///
     /// The format of the [reference implementation](https://github.com/tdunning/t-digest) is
     /// auto-detected. Use [`deserialize_f32()`](Self::deserialize_f32) for the compact
@@ -608,8 +612,8 @@ impl TDigestMut {
 
     /// Deserializes a mutable t-digest from the compact single-precision DataSketches format.
     ///
-    /// This format stores centroid means and weights as `(f32, u32)` and is emitted by the C++
-    /// `tdigest<float>` implementation. Its header does not identify the scalar width, so callers
+    /// Accepts data serialized by `tdigest<float>` in DataSketches C++. This format stores centroid
+    /// means and weights as `(f32, u32)`. Its header does not identify the scalar width, so callers
     /// must select this entry point explicitly.
     ///
     /// # Errors
@@ -1368,7 +1372,9 @@ impl TDigest {
         self.centroids_weight
     }
 
-    /// Serializes this immutable t-digest to bytes.
+    /// Serializes this immutable t-digest to bytes in double precision.
+    ///
+    /// The serialized data can be read by other DataSketches implementations.
     ///
     /// # Examples
     ///
@@ -1396,6 +1402,8 @@ impl TDigest {
 
     /// Deserializes an immutable t-digest from the standard double-precision format.
     ///
+    /// Also accepts data serialized by other DataSketches implementations.
+    ///
     /// The format of the [reference implementation](https://github.com/tdunning/t-digest) is
     /// auto-detected. Use [`deserialize_f32()`](Self::deserialize_f32) for the compact
     /// DataSketches C++ `tdigest<float>` format.
@@ -1408,6 +1416,9 @@ impl TDigest {
     }
 
     /// Deserializes an immutable t-digest from the compact single-precision DataSketches format.
+    ///
+    /// Accepts data serialized by `tdigest<float>` in DataSketches C++; see
+    /// [`TDigestMut::deserialize_f32`] for the encoding details.
     ///
     /// # Errors
     ///

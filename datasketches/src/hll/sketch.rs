@@ -137,8 +137,8 @@ impl HllSketch {
 
     /// Updates the sketch with a value.
     ///
-    /// You may use [`hash::value`](crate::hash::value) wrappers when another DataSketches
-    /// implementation requires a specific value hashing strategy.
+    /// Use [`hash::value`](crate::hash::value) wrappers to select an input encoding for
+    /// cross-language hashing.
     ///
     /// To reuse the hash across sketches, see [`Coupon`] and
     /// [`update_with_coupon`](Self::update_with_coupon).
@@ -314,6 +314,8 @@ impl HllSketch {
 
     /// Deserializes an HLL sketch from bytes.
     ///
+    /// Also accepts data serialized by other DataSketches implementations.
+    ///
     /// # Errors
     ///
     /// Returns `InvalidData` if the image is truncated or contains an invalid preamble,
@@ -442,6 +444,8 @@ impl HllSketch {
     }
 
     /// Serializes the HLL sketch to bytes.
+    ///
+    /// The serialized data can be read by other DataSketches implementations.
     ///
     /// # Examples
     ///

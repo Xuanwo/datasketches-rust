@@ -40,9 +40,8 @@ type DeserializeItems<T> = fn(SketchSlice<'_>, usize) -> Result<Vec<T>, Error>;
 
 const LG_MIN_MAP_SIZE: u8 = 3;
 const MIN_MAP_SIZE: usize = 1 << LG_MIN_MAP_SIZE;
-// Java represents map sizes as positive `int` powers of two, while the C++
-// implementation uses 32-bit table indices. Keep Rust configurations within
-// the same cross-language range.
+// datasketches-java represents map sizes as positive `int` powers of two, while datasketches-cpp
+// uses 32-bit table indices. Keep Rust configurations within the same cross-language range.
 const LG_MAX_MAP_SIZE: u8 = 30;
 const MAX_MAP_SIZE: usize = 1 << LG_MAX_MAP_SIZE;
 const SAMPLE_SIZE: usize = 1024;
@@ -680,8 +679,8 @@ impl<T: Eq + Hash> FrequentItemsSketch<T> {
             return Err(Error::deserial("empty flag does not match preamble longs"));
         }
         if is_empty {
-            // Java also restores empty images at the minimum size. `lg_cur` does
-            // not carry item state here and must not control an eager allocation.
+            // datasketches-java also restores empty images at the minimum size. `lg_cur` carries
+            // no item state here and must not control an eager allocation.
             return Ok(Self::with_lg_map_sizes(lg_max, LG_MIN_MAP_SIZE));
         }
 
@@ -755,6 +754,9 @@ impl<T: Eq + Hash> FrequentItemsSketch<T> {
 impl<T: FrequentItemValue> FrequentItemsSketch<T> {
     /// Serializes this sketch into a byte vector.
     ///
+    /// The serialized data can be read by other DataSketches implementations when both
+    /// sides use the same [`FrequentItemValue`] item encoding.
+    ///
     /// # Examples
     ///
     /// Built-in support for `i64`:
@@ -786,6 +788,9 @@ impl<T: FrequentItemValue> FrequentItemsSketch<T> {
     }
 
     /// Deserializes a sketch from bytes.
+    ///
+    /// Also accepts data serialized by other DataSketches implementations when both
+    /// sides use the same [`FrequentItemValue`] item encoding.
     ///
     /// # Errors
     ///

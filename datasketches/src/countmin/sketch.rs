@@ -306,7 +306,10 @@ impl<T: CountMinValue> CountMinSketch<T> {
         Ok(())
     }
 
-    /// Serializes this sketch into the DataSketches CountMin format.
+    /// Serializes this sketch into the Count-Min binary format.
+    ///
+    /// DataSketches C++ can read the serialized data, but item queries and updates there are
+    /// unreliable because the two implementations map items to counters differently.
     ///
     /// # Examples
     ///
@@ -357,6 +360,10 @@ impl<T: CountMinValue> CountMinSketch<T> {
 
     /// Deserializes a sketch from bytes using the default seed.
     ///
+    /// Can read sketches serialized by DataSketches C++.
+    /// Item queries and updates on those sketches are unreliable because the two
+    /// implementations map items to counters differently.
+    ///
     /// # Errors
     ///
     /// Returns `InvalidData` if the image is malformed or its seed hash does not match the default
@@ -378,6 +385,10 @@ impl<T: CountMinValue> CountMinSketch<T> {
     }
 
     /// Deserializes a sketch from bytes using the provided seed.
+    ///
+    /// Can read sketches serialized by DataSketches C++.
+    /// Item queries and updates on those sketches are unreliable because the two
+    /// implementations map items to counters differently.
     ///
     /// # Errors
     ///

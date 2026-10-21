@@ -261,7 +261,7 @@ impl BloomFilter {
     /// * Items never inserted into this filter may return `true` (false positives), at a rate no
     ///   higher than this filter's false positive rate before the operation.
     ///
-    /// This is the transformation other DataSketches libraries expose as A NOT B.
+    /// This operation is also known as A NOT B.
     ///
     /// # Errors
     ///
@@ -379,7 +379,7 @@ impl BloomFilter {
 
     /// Serializes the filter to a byte vector.
     ///
-    /// The format is compatible with other Apache DataSketches implementations.
+    /// The serialized data can be read by other DataSketches implementations.
     ///
     /// # Examples
     ///
@@ -440,6 +440,8 @@ impl BloomFilter {
     }
 
     /// Deserializes a filter from bytes.
+    ///
+    /// Also accepts data serialized by other DataSketches implementations.
     ///
     /// # Errors
     ///

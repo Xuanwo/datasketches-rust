@@ -179,8 +179,8 @@ impl CpcSketch {
 
     /// Updates the sketch with a hashable value.
     ///
-    /// You may use [`hash::value`](crate::hash::value) wrappers when another DataSketches
-    /// implementation requires a specific value hashing strategy.
+    /// Use [`hash::value`](crate::hash::value) wrappers to select an input encoding for
+    /// cross-language hashing.
     ///
     /// # Examples
     ///
@@ -490,6 +490,8 @@ impl fmt::Debug for CpcSketch {
 
 impl CpcSketch {
     /// Serializes this `CpcSketch` to bytes.
+    ///
+    /// The serialized data can be read by other DataSketches implementations.
     pub fn serialize(&self) -> Vec<u8> {
         let flavor = self.flavor();
         let has_hip = !self.merge_flag;
@@ -623,6 +625,8 @@ impl CpcSketch {
 
     /// Deserializes a `CpcSketch` from bytes.
     ///
+    /// Also accepts data serialized by other DataSketches implementations.
+    ///
     /// # Errors
     ///
     /// Returns `InvalidData` if the image is malformed or its seed hash does not match the default
@@ -632,6 +636,8 @@ impl CpcSketch {
     }
 
     /// Deserializes a `CpcSketch` from bytes with the provided seed.
+    ///
+    /// Also accepts data serialized by other DataSketches implementations.
     ///
     /// # Errors
     ///
