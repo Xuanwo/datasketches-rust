@@ -156,6 +156,7 @@ impl TDigestBuffer {
         self.centroids
     }
 
+    /// Returns an estimate of memory usage in bytes.
     fn estimated_size(&self) -> usize {
         self.centroids.capacity() * size_of::<Centroid>()
     }
@@ -1012,9 +1013,9 @@ impl TDigestMut {
         centroids.shrink_to(target_capacity);
     }
 
-    /// Returns the estimated size of the sketch in bytes.
+    /// Returns an estimate of the sketch's memory usage in bytes.
     pub fn estimated_size(&self) -> usize {
-        size_of::<Self>() + self.buffer.estimated_size()
+        self.buffer.estimated_size()
     }
 }
 
@@ -1630,9 +1631,9 @@ impl TDigest {
         )
     }
 
-    /// Returns the estimated size of the sketch in bytes.
+    /// Returns an estimate of the sketch's memory usage in bytes.
     pub fn estimated_size(&self) -> usize {
-        size_of::<Self>() + self.centroids.capacity() * size_of::<Centroid>()
+        self.centroids.capacity() * size_of::<Centroid>()
     }
 }
 

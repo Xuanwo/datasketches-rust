@@ -639,9 +639,9 @@ impl BloomFilter {
         was_set
     }
 
-    /// Returns the estimated size of the filter in bytes.
+    /// Returns an estimate of the filter's memory usage in bytes.
     pub fn estimated_size(&self) -> usize {
-        size_of::<Self>() + self.bit_array.len() * size_of::<u64>()
+        self.bit_array.len() * size_of::<u64>()
     }
 }
 

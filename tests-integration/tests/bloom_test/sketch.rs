@@ -212,6 +212,12 @@ fn test_requested_size_rounds_to_word_boundary() {
 }
 
 #[test]
+fn test_estimated_size() {
+    let filter = BloomFilterBuilder::with_size(65, 3).build().unwrap();
+    assert_eq!(filter.estimated_size(), 16);
+}
+
+#[test]
 fn test_accuracy_builder_rejects_zero_items_at_build() {
     let error = BloomFilterBuilder::with_accuracy(0, 0.01)
         .build()
