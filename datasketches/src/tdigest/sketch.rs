@@ -1660,19 +1660,35 @@ impl TDigestView<'_> {
 
         // Split points increase, so their lower centroid indexes never move backwards.
         // Accumulate integer weights only as far as each query needs.
+        let binary_search_cost = self.centroids.len().ilog2() as usize;
+        let use_scan = split_points.len().saturating_mul(binary_search_cost) > self.centroids.len();
+        let mut index = 0;
         let mut previous_lower = 0;
         let mut weight_below = 0;
 
         let mut ranks = Vec::with_capacity(split_points.len() + 1);
         for &p in split_points {
-            ranks.push(self.rank_with_weights(p, |lower| {
-                weight_below += self.centroids[previous_lower..lower]
-                    .iter()
-                    .map(|c| c.weight.get())
-                    .sum::<u64>();
-                previous_lower = lower;
-                weight_below
-            }));
+            ranks.push(self.rank_with_weights(
+                p,
+                |centroids, value| {
+                    if use_scan {
+                        while index < centroids.len() && centroids[index].mean < value {
+                            index += 1;
+                        }
+                        index
+                    } else {
+                        centroid_lower_bound_index(centroids, value)
+                    }
+                },
+                |lower| {
+                    weight_below += self.centroids[previous_lower..lower]
+                        .iter()
+                        .map(|c| c.weight.get())
+                        .sum::<u64>();
+                    previous_lower = lower;
+                    weight_below
+                },
+            ));
         }
         ranks.push(1.0);
         Some(ranks)
@@ -1684,13 +1700,20 @@ impl TDigestView<'_> {
         if self.centroids.is_empty() {
             return None;
         }
-        Some(self.rank_with_weights(value, |lower| {
-            self.centroids[..lower].iter().map(|c| c.weight.get()).sum()
-        }))
+        Some(
+            self.rank_with_weights(value, centroid_lower_bound_index, |lower| {
+                self.centroids[..lower].iter().map(|c| c.weight.get()).sum()
+            }),
+        )
     }
 
-    /// Rank within a non-empty centroid sequence, using the weight before its lower anchor.
-    fn rank_with_weights(&self, value: f64, weight_before: impl FnOnce(usize) -> u64) -> f64 {
+    /// Rank within a non-empty centroid sequence, using the first centroid at or above `value`.
+    fn rank_with_weights(
+        &self,
+        value: f64,
+        find_index: impl FnOnce(&[Centroid], f64) -> usize,
+        weight_before: impl FnOnce(usize) -> u64,
+    ) -> f64 {
         if value < self.min {
             return 0.0;
         }
@@ -1739,7 +1762,7 @@ impl TDigestView<'_> {
 
         // The tail checks place value within the centroid means. Between means, the first
         // mean >= value and its predecessor bracket it; at a mean, use the entire equal run.
-        let index = self.centroids.partition_point(|c| c.mean < value);
+        let index = find_index(self.centroids, value);
         let (lower, upper) = if self.centroids[index].mean == value {
             let end = self.centroids.partition_point(|c| c.mean <= value);
             (index, end - 1)
@@ -1961,6 +1984,10 @@ fn centroid_cmp(a: &Centroid, b: &Centroid) -> Ordering {
         Some(order) => order,
         None => unreachable!("NaN values should never be present in centroids"),
     }
+}
+
+fn centroid_lower_bound_index(centroids: &[Centroid], value: f64) -> usize {
+    centroids.partition_point(|centroid| centroid.mean < value)
 }
 
 fn centroids_are_sorted(centroids: &[Centroid]) -> bool {
