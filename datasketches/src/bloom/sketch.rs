@@ -136,6 +136,12 @@ impl BloomFilter {
     /// assert!(filter.contains(&"apple"));
     /// ```
     pub fn insert<T: Hash>(&mut self, item: T) {
+        // Reuse the conditional path when skipping writes on repeats is cheaper.
+        if self.num_hashes == 1 {
+            let _ = self.contains_and_insert(&item);
+            return;
+        }
+
         let (h0, h1) = self.compute_hash(&item);
         self.insert_bits(h0, h1);
     }
@@ -610,18 +616,6 @@ impl BloomFilter {
 
     /// Sets all k bits without returning a membership result.
     fn insert_bits(&mut self, h0: u64, h1: u64) {
-        // With one hash, repeated insertion is cheaper without unconditional stores.
-        if self.num_hashes == 1 {
-            let bit_index = self.compute_bit_index(h0, h1, 1);
-            let word = &mut self.bit_array[bit_index >> 6];
-            let mask = 1u64 << (bit_index & 63);
-            if (*word & mask) == 0 {
-                *word |= mask;
-                self.num_bits_set += 1;
-            }
-            return;
-        }
-
         for i in 1..=self.num_hashes {
             let bit_index = self.compute_bit_index(h0, h1, i);
             let word_index = bit_index >> 6;
