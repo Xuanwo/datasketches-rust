@@ -594,7 +594,7 @@ impl BloomFilter {
         true
     }
 
-    /// Sets all k bits without tracking whether they were already set.
+    /// Sets all k bits without returning a membership result.
     fn insert_bits(&mut self, h0: u64, h1: u64) {
         for i in 1..=self.num_hashes {
             let bit_index = self.compute_bit_index(h0, h1, i);
