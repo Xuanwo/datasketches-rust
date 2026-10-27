@@ -56,6 +56,30 @@ fn test_membership_statistics_and_reset() {
 }
 
 #[test]
+fn test_insert_paths_agree_with_collisions_and_repeated_items() {
+    for (num_bits, num_hashes) in [(64, 1), (64, 7), (64, 65), (NUM_BITS, NUM_HASHES)] {
+        let mut inserted = BloomFilterBuilder::with_size(num_bits, num_hashes)
+            .build()
+            .unwrap();
+        let mut checked = inserted.clone();
+
+        for value in (0..128_u64).cycle().take(512) {
+            let was_present = inserted.contains(&value);
+            assert_eq!(checked.contains_and_insert(&value), was_present);
+            inserted.insert(value);
+            assert!(inserted.contains(&value));
+            assert_eq!(checked, inserted);
+        }
+
+        // Deserialization independently checks the bit count against the backing array.
+        assert_eq!(
+            BloomFilter::deserialize(&inserted.serialize()).unwrap(),
+            inserted
+        );
+    }
+}
+
+#[test]
 fn test_union_and_intersection() {
     let mut left = filter();
     left.insert("shared");

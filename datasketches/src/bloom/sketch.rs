@@ -99,7 +99,21 @@ impl BloomFilter {
     /// ```
     pub fn contains_and_insert<T: Hash>(&mut self, item: &T) -> bool {
         let (h0, h1) = self.compute_hash(item);
-        self.set_bits(h0, h1)
+        let mut were_all_set = true;
+        for i in 1..=self.num_hashes {
+            let bit_index = self.compute_bit_index(h0, h1, i);
+            let word_index = bit_index >> 6;
+            let bit_offset = bit_index & 63;
+            let mask = 1u64 << bit_offset;
+            let word = &mut self.bit_array[word_index];
+
+            if (*word & mask) == 0 {
+                *word |= mask;
+                self.num_bits_set += 1;
+                were_all_set = false;
+            }
+        }
+        were_all_set
     }
 
     /// Inserts an item into the filter.
@@ -609,16 +623,6 @@ impl BloomFilter {
         }
     }
 
-    /// Sets all k bits and returns whether they were already set.
-    fn set_bits(&mut self, h0: u64, h1: u64) -> bool {
-        let mut were_all_set = true;
-        for i in 1..=self.num_hashes {
-            let bit_index = self.compute_bit_index(h0, h1, i);
-            were_all_set &= self.set_bit(bit_index);
-        }
-        were_all_set
-    }
-
     /// Computes a bit index using double hashing (Kirsch-Mitzenmacher).
     ///
     /// Formula:
@@ -638,20 +642,6 @@ impl BloomFilter {
         let bit_offset = bit_index & 63; // Equivalent to bit_index % 64
         let mask = 1u64 << bit_offset;
         (self.bit_array[word_index] & mask) != 0
-    }
-
-    /// Sets a single bit and returns whether it was already set.
-    fn set_bit(&mut self, bit_index: usize) -> bool {
-        let word_index = bit_index >> 6; // Equivalent to bit_index / 64
-        let bit_offset = bit_index & 63; // Equivalent to bit_index % 64
-        let mask = 1u64 << bit_offset;
-        let was_set = (self.bit_array[word_index] & mask) != 0;
-
-        if !was_set {
-            self.bit_array[word_index] |= mask;
-            self.num_bits_set += 1;
-        }
-        was_set
     }
 
     /// Returns an estimate of the filter's memory usage in bytes.
