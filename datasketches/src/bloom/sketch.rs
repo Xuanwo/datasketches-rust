@@ -42,7 +42,7 @@ const EMPTY_FLAG_MASK: u8 = 1 << 2;
 pub struct BloomFilter {
     /// Hash seed for all hash functions
     seed: u64,
-    /// Number of hash functions to use (k)
+    /// Number of hash functions (k).
     num_hashes: u16,
     /// Count of bits set to 1 (for statistics)
     num_bits_set: u64,
@@ -136,12 +136,6 @@ impl BloomFilter {
     /// assert!(filter.contains(&"apple"));
     /// ```
     pub fn insert<T: Hash>(&mut self, item: T) {
-        // Reuse the conditional path when skipping writes on repeats is cheaper.
-        if self.num_hashes == 1 {
-            let _ = self.contains_and_insert(&item);
-            return;
-        }
-
         let (h0, h1) = self.compute_hash(&item);
         for i in 1..=self.num_hashes {
             let bit_index = self.compute_bit_index(h0, h1, i);
@@ -359,7 +353,10 @@ impl BloomFilter {
         self.bit_array.len() * 64
     }
 
-    /// Returns the number of hash functions used.
+    /// Returns the number of hash functions (`k`).
+    ///
+    /// The `k` hash functions are derived from two base hashes using double hashing.
+    /// Their bit positions may repeat.
     pub fn num_hashes(&self) -> u16 {
         self.num_hashes
     }
@@ -656,7 +653,8 @@ impl BloomFilter {
 /// Provides two construction modes:
 /// * [`with_accuracy()`](Self::with_accuracy): Specify target items and false positive rate
 ///   (recommended)
-/// * [`with_size()`](Self::with_size): Specify requested bit count and hash functions (manual)
+/// * [`with_size()`](Self::with_size): Specify requested bit count and number of hash functions
+///   (manual)
 ///
 /// Configuration is stored without validation and checked when [`build()`](Self::build) is called.
 /// Accuracy construction treats `max_items` as a sizing assumption, not an insertion limit. The
@@ -735,7 +733,7 @@ impl BloomFilterBuilder {
     /// # Arguments
     ///
     /// * `num_bits`: Total number of bits in the filter.
-    /// * `num_hashes`: Number of hash functions to use.
+    /// * `num_hashes`: Number of hash functions (`k`); see [`BloomFilter::num_hashes`].
     ///
     /// # Examples
     ///
