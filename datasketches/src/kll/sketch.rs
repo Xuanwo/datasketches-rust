@@ -212,42 +212,24 @@ impl<T: Clone + Ord> KllSketch<T> {
         if self.is_empty() {
             return None;
         }
-        let inclusive = criteria == SearchCriteria::Inclusive;
-        // Single-level sketches are exact; keep the original linear scan for this low-latency path.
-        if self.levels.len() == 1 {
-            let count = self.levels[0]
-                .iter()
-                .filter(|retained| match (*retained).cmp(item) {
-                    Ordering::Less => true,
-                    Ordering::Equal => inclusive,
-                    Ordering::Greater => false,
-                })
-                .count() as u64;
+        // Keep a direct scan to preserve query latency for small exact sketches.
+        if let [items] = self.levels.as_slice() {
+            let count = count_rank_linear(items, item, criteria);
             return Some(count as f64 / self.n as f64);
         }
 
-        let mut weight = 0u64;
+        let mut rank_weight = 0u64;
         for (level, items) in self.levels.iter().enumerate() {
             // Higher levels are always sorted; level zero may be an unsorted update buffer.
-            let count = if level > 0 || self.is_level_zero_sorted {
-                if inclusive {
-                    items.partition_point(|retained| retained.cmp(item) != Ordering::Greater)
-                } else {
-                    items.partition_point(|retained| retained.cmp(item) == Ordering::Less)
-                }
+            let is_sorted = level > 0 || self.is_level_zero_sorted;
+            let count = if is_sorted {
+                count_rank_sorted(items, item, criteria)
             } else {
-                items
-                    .iter()
-                    .filter(|retained| match (*retained).cmp(item) {
-                        Ordering::Less => true,
-                        Ordering::Equal => inclusive,
-                        Ordering::Greater => false,
-                    })
-                    .count()
-            } as u64;
-            weight += count << level;
+                count_rank_linear(items, item, criteria)
+            };
+            rank_weight += (count as u64) << level;
         }
-        Some(weight as f64 / self.n as f64)
+        Some(rank_weight as f64 / self.n as f64)
     }
 
     /// Returns the quantile for the given normalized rank.
@@ -939,6 +921,29 @@ impl<T: Clone + Ord> KllSketch<T> {
         }
 
         Ok(())
+    }
+}
+
+fn count_rank_linear<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) -> usize {
+    let inclusive = criteria == SearchCriteria::Inclusive;
+    items
+        .iter()
+        .filter(|retained| match (*retained).cmp(item) {
+            Ordering::Less => true,
+            Ordering::Equal => inclusive,
+            Ordering::Greater => false,
+        })
+        .count()
+}
+
+fn count_rank_sorted<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) -> usize {
+    match criteria {
+        SearchCriteria::Inclusive => {
+            items.partition_point(|retained| retained.cmp(item) != Ordering::Greater)
+        }
+        SearchCriteria::Exclusive => {
+            items.partition_point(|retained| retained.cmp(item) == Ordering::Less)
+        }
     }
 }
 
