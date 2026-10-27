@@ -596,6 +596,12 @@ impl BloomFilter {
 
     /// Sets all k bits without returning a membership result.
     fn insert_bits(&mut self, h0: u64, h1: u64) {
+        // With one hash, repeated insertion is cheaper without unconditional stores.
+        if self.num_hashes == 1 {
+            self.set_bits(h0, h1);
+            return;
+        }
+
         for i in 1..=self.num_hashes {
             let bit_index = self.compute_bit_index(h0, h1, i);
             let word_index = bit_index >> 6;
