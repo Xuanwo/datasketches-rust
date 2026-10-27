@@ -4,6 +4,10 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Improvements
+
+* `BloomFilter::insert` is faster for streams of new items when multiple hashes are configured.
+
 ## v0.6.0
 
 ### Breaking changes
