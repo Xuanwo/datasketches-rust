@@ -925,25 +925,19 @@ impl<T: Clone + Ord> KllSketch<T> {
 }
 
 fn count_rank_linear<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) -> usize {
-    let inclusive = criteria == SearchCriteria::Inclusive;
     items
         .iter()
-        .filter(|retained| match (*retained).cmp(item) {
-            Ordering::Less => true,
-            Ordering::Equal => inclusive,
-            Ordering::Greater => false,
+        .filter(|retained| match criteria {
+            SearchCriteria::Inclusive => *retained <= item,
+            SearchCriteria::Exclusive => *retained < item,
         })
         .count()
 }
 
 fn count_rank_sorted<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) -> usize {
     match criteria {
-        SearchCriteria::Inclusive => {
-            items.partition_point(|retained| retained.cmp(item) != Ordering::Greater)
-        }
-        SearchCriteria::Exclusive => {
-            items.partition_point(|retained| retained.cmp(item) == Ordering::Less)
-        }
+        SearchCriteria::Inclusive => items.partition_point(|retained| retained <= item),
+        SearchCriteria::Exclusive => items.partition_point(|retained| retained < item),
     }
 }
 
