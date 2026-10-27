@@ -935,10 +935,10 @@ fn count_rank_linear<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) ->
 }
 
 fn count_rank_sorted<T: Ord>(items: &[T], item: &T, criteria: SearchCriteria) -> usize {
-    match criteria {
-        SearchCriteria::Inclusive => items.partition_point(|retained| retained <= item),
-        SearchCriteria::Exclusive => items.partition_point(|retained| retained < item),
-    }
+    items.partition_point(|retained| match criteria {
+        SearchCriteria::Inclusive => retained <= item,
+        SearchCriteria::Exclusive => retained < item,
+    })
 }
 
 fn normalized_rank_error(k: u16, pmf: bool) -> f64 {
