@@ -4,6 +4,10 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Improvements
+
+* `KllSketch::rank` is about 7.5x faster for an `i64` benchmark sketch with `k = 200` and 100,000 updates when `SearchCriteria` is fixed at compile time. Queries with runtime criteria may be slower on tiny sketches.
+
 ## v0.6.0
 
 ### Breaking changes

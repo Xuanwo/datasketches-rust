@@ -213,16 +213,19 @@ impl<T: Clone + Ord> KllSketch<T> {
             return None;
         }
         let inclusive = criteria == SearchCriteria::Inclusive;
+        let in_rank = |retained: &T| match retained.cmp(item) {
+            Ordering::Less => true,
+            Ordering::Equal => inclusive,
+            Ordering::Greater => false,
+        };
         let mut weight = 0u64;
         for (level, items) in self.levels.iter().enumerate() {
-            let count = items
-                .iter()
-                .filter(|retained| match (*retained).cmp(item) {
-                    Ordering::Less => true,
-                    Ordering::Equal => inclusive,
-                    Ordering::Greater => false,
-                })
-                .count() as u64;
+            // Higher levels are always sorted; level zero may be an unsorted update buffer.
+            let count = if level > 0 || self.is_level_zero_sorted {
+                items.partition_point(&in_rank)
+            } else {
+                items.iter().filter(|retained| in_rank(retained)).count()
+            } as u64;
             weight += count << level;
         }
         Some(weight as f64 / self.n as f64)
