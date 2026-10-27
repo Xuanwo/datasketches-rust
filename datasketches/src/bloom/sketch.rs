@@ -123,7 +123,17 @@ impl BloomFilter {
     /// ```
     pub fn insert<T: Hash>(&mut self, item: T) {
         let (h0, h1) = self.compute_hash(&item);
-        self.set_bits(h0, h1);
+        for i in 1..=self.num_hashes {
+            let bit_index = self.compute_bit_index(h0, h1, i);
+            let word_index = bit_index >> 6;
+            let bit_offset = bit_index & 63;
+            let mask = 1u64 << bit_offset;
+            let word = &mut self.bit_array[word_index];
+            let was_set = (*word & mask) != 0;
+
+            *word |= mask;
+            self.num_bits_set += u64::from(!was_set);
+        }
     }
 
     /// Resets the filter to its initial empty state.
