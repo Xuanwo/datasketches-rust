@@ -4,6 +4,10 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Improvements
+
+* `CpcSketch::serialize` avoids a redundant final sort for Hybrid-flavor sketches. Serialized bytes are unchanged; measured Hybrid serialization improves, while tiny Sparse sketches may see a small serialization latency cost.
+
 ## v0.6.0
 
 ### Breaking changes

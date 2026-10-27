@@ -535,6 +535,9 @@ impl CpcSketch {
                         window_index += 1;
                     }
                 }
+
+                // The table pairs are sorted before the merge, and the window pairs are generated
+                // in ascending row-column order. The merge therefore produces sorted pairs.
                 all_pairs
             }
             Flavor::Pinned => {
@@ -559,7 +562,9 @@ impl CpcSketch {
                 pairs
             }
         };
-        pairs.sort_unstable();
+        if flavor != Flavor::Hybrid {
+            pairs.sort_unstable();
+        }
 
         let table_num_entries = pairs.len() as u32;
         let mut payload = SketchBytes::with_capacity(if self.is_empty() { 0 } else { 256 });
