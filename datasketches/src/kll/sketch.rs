@@ -213,18 +213,37 @@ impl<T: Clone + Ord> KllSketch<T> {
             return None;
         }
         let inclusive = criteria == SearchCriteria::Inclusive;
-        let in_rank = |retained: &T| match retained.cmp(item) {
-            Ordering::Less => true,
-            Ordering::Equal => inclusive,
-            Ordering::Greater => false,
-        };
+        // Single-level sketches are exact; keep the original linear scan for this low-latency path.
+        if self.levels.len() == 1 {
+            let count = self.levels[0]
+                .iter()
+                .filter(|retained| match (*retained).cmp(item) {
+                    Ordering::Less => true,
+                    Ordering::Equal => inclusive,
+                    Ordering::Greater => false,
+                })
+                .count() as u64;
+            return Some(count as f64 / self.n as f64);
+        }
+
         let mut weight = 0u64;
         for (level, items) in self.levels.iter().enumerate() {
             // Higher levels are always sorted; level zero may be an unsorted update buffer.
             let count = if level > 0 || self.is_level_zero_sorted {
-                items.partition_point(&in_rank)
+                if inclusive {
+                    items.partition_point(|retained| retained.cmp(item) != Ordering::Greater)
+                } else {
+                    items.partition_point(|retained| retained.cmp(item) == Ordering::Less)
+                }
             } else {
-                items.iter().filter(|retained| in_rank(retained)).count()
+                items
+                    .iter()
+                    .filter(|retained| match (*retained).cmp(item) {
+                        Ordering::Less => true,
+                        Ordering::Equal => inclusive,
+                        Ordering::Greater => false,
+                    })
+                    .count()
             } as u64;
             weight += count << level;
         }
